@@ -1,7 +1,7 @@
 """
 generate_report_pdf.py
-Automated generator for the publication-quality academic Project Report PDF
-and Markdown report according to the U21ADP05 assignment specifications.
+Publication-quality academic Project Report PDF and Markdown generator
+conforming to U21ADP05 specifications for student Nethra (Roll No: 24AD073).
 """
 
 import os
@@ -9,13 +9,54 @@ import pandas as pd
 from reportlab.lib.pagesizes import letter
 from reportlab.lib import colors
 from reportlab.platypus import (
-    SimpleDocTemplate, Paragraph, Spacer, Image, Table, TableStyle, PageBreak, KeepTogether, HRFlowable
+    SimpleDocTemplate, Paragraph, Spacer, Image, Table, TableStyle, KeepTogether, HRFlowable
 )
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
+from reportlab.pdfgen import canvas
 
 REPORT_DIR = "reports"
 os.makedirs(REPORT_DIR, exist_ok=True)
+
+
+class NumberedCanvas(canvas.Canvas):
+    """Two-pass canvas to dynamically compute and stamp total page count, header, and footer."""
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._saved_page_states = []
+
+    def showPage(self):
+        self._saved_page_states.append(dict(self.__dict__))
+        self._startPage()
+
+    def save(self):
+        num_pages = len(self._saved_page_states)
+        for state in self._saved_page_states:
+            self.__dict__.update(state)
+            self.draw_page_decorations(num_pages)
+            super().showPage()
+        super().save()
+
+    def draw_page_decorations(self, page_count):
+        self.saveState()
+        self.setFont("Helvetica", 8)
+        self.setFillColor(colors.HexColor("#6c757d"))
+        
+        # Header on pages > 1
+        if self._pageNumber > 1:
+            self.drawString(40, 762, "KPRIET | Dept. of AI & DS — U21ADP05: EDA & Visualization")
+            self.drawRightString(572, 762, "Case Study: Employee Attrition & Deep Learning")
+            self.setStrokeColor(colors.HexColor("#ced4da"))
+            self.setLineWidth(0.5)
+            self.line(40, 756, 572, 756)
+            
+        # Running Footer on all pages
+        self.setStrokeColor(colors.HexColor("#ced4da"))
+        self.setLineWidth(0.5)
+        self.line(40, 34, 572, 34)
+        self.drawString(40, 23, "Student: Nethra (Roll No: 24AD073) | GitHub: nethradevi924-sys/eda_project")
+        self.drawRightString(572, 23, f"Page {self._pageNumber} of {page_count}")
+        self.restoreState()
 
 
 def build_markdown_report(eda_catalog: list[dict], eval_catalog: list[dict], metrics: dict, tuning_df: pd.DataFrame) -> str:
@@ -27,31 +68,30 @@ def build_markdown_report(eda_catalog: list[dict], eval_catalog: list[dict], met
 **Course Code:** U21ADP05 – Exploratory Data Analysis and Visualization  
 **Academic Year:** 2026 – 2027 (ODD SEM) | **Batch:** 2023–2027 | **Year / Sem:** V  
 **Institution:** Department of Artificial Intelligence and Data Science, KPR Institute of Engineering and Technology  
-**Course Coordinator:** Mr. Rushikesh Kadam  
 **Date of Submission:** 15/10/2026  
-**Student Name:** Nethradevi | **Roll No:** [Student Roll Number]  
+**Student Name:** Nethra | **Roll No:** 24AD073  
 
 ---
 
 ## 1. Title Page Information
 - **Project Title:** Case Study: Exploratory Data Analysis, Statistical Distribution Exploration, and Deep Learning Risk Modeling of Employee Attrition
-- **Student Name:** Nethradevi
-- **Roll Number / Register ID:** 711221104000 (AI & DS)
+- **Student Name:** Nethra
+- **Roll Number / Register ID:** 24AD073
 - **Degree & Branch:** B.Tech. Artificial Intelligence and Data Science
 - **Semester / Year:** Semester V / Year III (Batch 2023–2027)
 - **Institution:** KPR Institute of Engineering and Technology, Coimbatore
 - **Course Title & Code:** Exploratory Data Analysis and Visualization (U21ADP05)
-- **Course Coordinator:** Mr. Rushikesh Kadam
 - **Submission Date:** October 15, 2026
+- **Public GitHub Repository:** https://github.com/nethradevi924-sys/eda_project
 
 ---
 
-## 2. Abstract (142 words)
+## 2. Abstract
 Employee attrition presents a major operational and financial vulnerability for contemporary enterprises, often incurring significant replacement and retraining expenses. This case study applies an end-to-end framework encompassing exploratory data analysis (EDA), rigorous statistical distribution modeling, and deep learning classification to the benchmark IBM HR Analytics dataset (1,470 records, 35 features). Guided by Ben Fry's 7 Stages of Data Visualization, we explore continuous probability distributions (Log-Normal vs. Gaussian), discrete count mechanics (Poisson modeling), and multivariate interrelationships. A Deep Multi-Layer Perceptron (MLP) with Batch Normalization and Dropout regularization was engineered, optimized with class-weighted binary cross-entropy, and trained to predict individual employee turnover risk. The neural network achieved an overall accuracy of {metrics['accuracy']*100:.1f}%, a precision of {metrics['precision']*100:.1f}%, and an ROC-AUC of {metrics['roc_auc']:.3f}. Permutation importance isolates overtime mandates, career experience, and monthly income as paramount turnover catalysts.
 
 ---
 
-## 3. Introduction & Objective
+## 3. Introduction & Objectives
 Talent retention is critical for organizational competitiveness. When experienced personnel depart, organizations suffer institutional memory erosion, operational disruption, and exorbitant onboarding overheads.
 
 ### Core Objectives:
@@ -89,32 +129,15 @@ Talent retention is critical for organizational competitiveness. When experience
 ---
 
 ## 5. EDA and Preprocessing
-### Data Cleaning & Integrity Audit
-1. **Missing Values:** 0 null values across all 35 columns (100% complete dataset).
-2. **Duplicate Records:** 0 duplicated rows detected.
-3. **Zero-Variance Feature Removal:** Removed `EmployeeCount` (constant=1), `StandardHours` (constant=80), `Over18` (constant='Y'), and uninformative identifier `EmployeeNumber`.
-4. **Outlier Detection & Treatment:** Evaluated continuous variables via Interquartile Range (IQR). Outliers on `MonthlyIncome` and `TotalWorkingYears` were treated via Winsorization/capping to prevent gradient explosion in neural network training without discarding valuable records.
-5. **Categorical Encoding:** Applied One-Hot Encoding to nominal variables (`Department`, `JobRole`, `MaritalStatus`, `EducationField`, `BusinessTravel`, `OverTime`), expanding the feature space to 45 input nodes.
-6. **Feature Normalization:** Applied `StandardScaler` (z-score standardization) fitted strictly on the training partition and applied to validation/test sets to eliminate data leakage.
-7. **Stratified Train/Val/Test Split:**
-   - **Training Set (70%):** 1,029 samples
-   - **Validation Set (15%):** 220 samples (used for early stopping & hyperparameter tuning)
-   - **Test Set (15%):** 221 samples (held-out evaluation partition)
+1. **Data Sanitization:** Removed uninformative constants (`EmployeeCount`, `StandardHours`, `Over18`) and arbitrary identifier `EmployeeNumber`.
+2. **Outlier Winsorization:** Applied IQR boundary capping to extreme upper-tail values in `MonthlyIncome` and `TotalWorkingYears` to stabilize neural gradient propagation without dropping observations.
+3. **Categorical Encoding:** Encoded nominal features (`JobRole`, `Department`, `EducationField`, `MaritalStatus`, `OverTime`, `BusinessTravel`), expanding the feature space to 44 input nodes.
+4. **Feature Normalization:** Standardized continuous variables using `StandardScaler` fitted strictly on the training partition to prevent data leakage.
+5. **Stratified Partitioning:** Partitioned data into 70% Train (1,029), 15% Validation (220), and 15% Test (221) while strictly preserving the 16.1% target attrition proportion.
 
 ---
 
 ## 6. Data Visualization (Ben Fry's 7 Stages & CO3/CO4 Visual Catalog)
-
-### Integration of Ben Fry's 7 Stages of Data Visualization
-1. **Acquire:** Ingested the raw dataset directly from repository sources into structured memory.
-2. **Parse:** Dissected features into continuous distributions, discrete event counts, and nominal classes.
-3. **Filter:** Pruned uninformative columns and applied IQR boundary treatment.
-4. **Mine:** Calculated skewness, kurtosis, two-sample t-tests, and theoretical Poisson/Log-Normal fits.
-5. **Represent:** Formulated publication plots: continuous PDF curves, discrete PMF comparisons, clustered heatmaps, violin plots.
-6. **Refine:** Applied high-contrast color palettes, LaTeX mathematical notations, and 300 DPI typography.
-7. **Interact:** Facilitated multi-faceted cross-variable drill-downs and feature importance rankings.
-
-### Detailed Visualizations Breakdown
 """
     for idx, vis in enumerate(eda_catalog, start=1):
         md_content += f"""
@@ -129,15 +152,15 @@ Talent retention is critical for organizational competitiveness. When experience
 ---
 
 ## 7. Deep Learning Model Architecture
-To predict employee turnover risk from the 45 standardized input features, a Multi-Layer Perceptron (MLP) was constructed in PyTorch.
+To predict employee turnover risk from the 44 standardized input features, a Multi-Layer Perceptron (MLP) was constructed in PyTorch.
 
 ### Network Architecture:
-- **Input Dimension:** 45 features (demographic, tenure, financial, and encoded nominal variables).
-- **Hidden Layer 1:** Dense(45 -> 128) + Batch Normalization + LeakyReLU(α=0.1) + Dropout(p=0.3)
+- **Input Dimension:** 44 features.
+- **Hidden Layer 1:** Dense(44 -> 128) + Batch Normalization + LeakyReLU(α=0.1) + Dropout(p=0.3)
 - **Hidden Layer 2:** Dense(128 -> 64) + Batch Normalization + LeakyReLU(α=0.1) + Dropout(p=0.2)
 - **Hidden Layer 3:** Dense(64 -> 32) + LeakyReLU(α=0.1) + Dropout(p=0.1)
 - **Output Layer:** Dense(32 -> 1) + Sigmoid Activation ($P(\\text{{Attrition}} = 1)$)
-- **Total Trainable Parameters:** 16,545 parameters.
+- **Total Trainable Parameters:** 16,513 parameters.
 
 ### Training Parameters & Optimization:
 - **Loss Function:** Binary Cross-Entropy Loss with positive class imbalance weighting ($w \\approx 5.2$).
@@ -182,236 +205,221 @@ To predict employee turnover risk from the 45 standardized input features, a Mul
 ---
 
 ## 9. Conclusion & Future Scope
-
-### Key Findings & Practical Lessons:
-1. **Overtime as the Dominant Risk Vector:** Requiring overtime increases turnover rate from 10.4% to 30.5% (a 3x jump). The deep learning model ranks overtime as the single most critical predictor.
-2. **Compensation & Experience Disconnect:** Employees departing the organization exhibit stagnant earnings relative to cumulative experience, clustering below the $5,000/month threshold even with 8–12 years of overall career tenure.
-3. **Tenure with Current Manager:** Employees in their first 1–2 years under a manager face significantly higher turnover hazard, pointing to managerial onboarding friction.
-4. **Model Performance:** The deep MLP architecture with Batch Normalization achieved strong convergence without memorizing the majority class, registering an ROC-AUC of {metrics['roc_auc']:.3f}.
-
-### Challenges Faced:
-- **Class Imbalance:** Only 16.1% of records represent turnover, necessitating weighted cross-entropy loss and ROC-AUC evaluation rather than naive accuracy.
-- **High Multicollinearity:** Strong collinearity among tenure features (`YearsAtCompany`, `YearsWithCurrManager`, `YearsInCurrentRole`) required careful regularized feature handling.
-
-### Future Scope & Enhancements:
-1. **Explainable AI Frameworks:** Incorporate SHAP (SHapley Additive exPlanations) and LIME to generate individual employee risk explanation cards.
-2. **Tabular Transformer Architectures:** Benchmark against TabNet and FT-Transformer models designed specifically for deep tabular learning.
-3. **Survival Analysis Integration:** Formulate turnover prediction as time-to-event survival modeling (e.g., Cox Proportional Hazards or DeepSurv).
-4. **Real-Time HR Dashboard:** Deploy as an interactive Streamlit or FastAPI application connecting to HR Information Systems (HRIS).
+- **Overtime as the Dominant Risk Vector:** Requiring overtime increases turnover rate from 10.4% to 30.5% (a 3x jump). The deep learning model ranks overtime as the single most critical predictor.
+- **Compensation & Experience Disconnect:** Employees departing the organization exhibit stagnant earnings relative to cumulative experience, clustering below the $5,000/month threshold even with 8–12 years of overall career tenure.
+- **Tenure with Current Manager:** Employees in their first 1–2 years under a manager face significantly higher turnover hazard, pointing to managerial onboarding friction.
+- **Model Performance:** The deep MLP architecture with Batch Normalization achieved strong convergence without memorizing the majority class, registering an ROC-AUC of {metrics['roc_auc']:.3f}.
 
 ---
 
 ## 10. Literature Review & References (APA / IEEE Style)
-1. **Fry, B.** (2008). *Visualizing Data: Exploring and Explaining Data with the Processing Environment*. O'Reilly Media. ISBN: 978-0596514556. (Establishes the foundational 7 stages of data visualization).
-2. **Tukey, J. W.** (1977). *Exploratory Data Analysis*. Addison-Wesley Publishing Company. (Foundational methodology for boxplots, IQR outlier detection, and empirical distribution exploration).
-3. **Goodfellow, I., Bengio, Y., & Courville, A.** (2016). *Deep Learning*. MIT Press. http://www.deeplearningbook.org (Theoretical principles of Multi-Layer Perceptrons, Batch Normalization, and Dropout regularization).
+1. **Fry, B.** (2008). *Visualizing Data: Exploring and Explaining Data with the Processing Environment*. O'Reilly Media. ISBN: 978-0596514556.
+2. **Tukey, J. W.** (1977). *Exploratory Data Analysis*. Addison-Wesley Publishing Company.
+3. **Goodfellow, I., Bengio, Y., & Courville, A.** (2016). *Deep Learning*. MIT Press. http://www.deeplearningbook.org
 4. **Alao, D., & Adeyemo, A. B.** (2013). "Analyzing employee attrition using decision tree algorithms." *Computing, Information Systems, Development Informatics & Allied Research Journal*, 4(1), 17–28.
 5. **Punnoose, R., & Ajit, P.** (2016). "Prediction of employee turnover in organizations using machine learning algorithms." *International Journal of Advanced Research in Artificial Intelligence (IJARAI)*, 5(9), 22–26. https://doi.org/10.14569/IJARAI.2016.050904.
 
 ---
 
 ## 11. Appendix (Code Section & Repository Structure)
-The full reproducible Python codebase is organized into modular pipelines:
-- `src/data_loader.py`: Ingestion, schema validation, and data audit.
-- `src/preprocessing.py`: IQR outlier Winsorization, encoding, and stratified splitting.
-- `src/visualizations.py`: Ben Fry's 7 stages and CO3/CO4 statistical plotting suite.
-- `src/model.py`: PyTorch AttritionMLP deep neural network definition.
-- `src/train.py`: Weighted BCE training loop, early stopping, and hyperparameter tuning.
-- `src/evaluate.py`: Performance metrics, confusion matrix, ROC-AUC, and permutation importance.
-- `src/generate_report_pdf.py`: Automated academic report compilation.
-- `notebooks/eda_and_deep_learning.ipynb`: Fully executed, interactive end-to-end Jupyter Notebook.
-
 GitHub Repository: https://github.com/nethradevi924-sys/eda_project
 """
     return md_content
 
 
 def generate_pdf_report(eda_catalog: list[dict], eval_catalog: list[dict], metrics: dict, tuning_df: pd.DataFrame, output_path: str = "reports/Project_Report.pdf"):
-    """Compiles a publication-quality multi-page PDF academic project report."""
+    """Compiles a tight, publication-grade academic PDF report without large white spaces."""
     print(f"[PDF Generator] Compiling academic PDF report to '{output_path}'...")
     
+    # 36 pt (0.5 inch) margins for professional publication density
     doc = SimpleDocTemplate(
         output_path,
         pagesize=letter,
-        leftMargin=40, rightMargin=40,
-        topMargin=36, bottomMargin=36
+        leftMargin=36, rightMargin=36,
+        topMargin=42, bottomMargin=40
     )
     
     styles = getSampleStyleSheet()
     
-    # Custom styles
-    title_style = ParagraphStyle("RepTitle", parent=styles["Title"], fontName="Helvetica-Bold", fontSize=20, leading=24, textColor=colors.HexColor("#1d3557"), alignment=1)
-    subtitle_style = ParagraphStyle("RepSub", parent=styles["Normal"], fontName="Helvetica", fontSize=11, leading=15, textColor=colors.HexColor("#457b9d"), alignment=1)
-    h1_style = ParagraphStyle("RepH1", parent=styles["Heading1"], fontName="Helvetica-Bold", fontSize=14, leading=18, textColor=colors.HexColor("#1d3557"), spaceBefore=14, spaceAfter=6)
-    h2_style = ParagraphStyle("RepH2", parent=styles["Heading2"], fontName="Helvetica-Bold", fontSize=11.5, leading=15, textColor=colors.HexColor("#e63946"), spaceBefore=10, spaceAfter=4)
-    body_style = ParagraphStyle("RepBody", parent=styles["BodyText"], fontName="Helvetica", fontSize=9.5, leading=13.5, textColor=colors.HexColor("#2b2d42"), spaceBefore=3, spaceAfter=5)
-    bullet_style = ParagraphStyle("RepBullet", parent=styles["Normal"], fontName="Helvetica", fontSize=9, leading=13, textColor=colors.HexColor("#2b2d42"), leftIndent=12, spaceBefore=2, spaceAfter=2)
-    code_style = ParagraphStyle("RepCode", parent=styles["Code"], fontName="Courier", fontSize=8, leading=10, textColor=colors.HexColor("#1d3557"))
-    meta_box_style = ParagraphStyle("RepMeta", parent=styles["Normal"], fontName="Helvetica", fontSize=9, leading=13, textColor=colors.HexColor("#1d3557"))
+    # Clean, professional typography styles
+    title_style = ParagraphStyle("RepTitle", parent=styles["Title"], fontName="Helvetica-Bold", fontSize=17, leading=21, textColor=colors.HexColor("#1d3557"), alignment=1, spaceAfter=8)
+    h1_style = ParagraphStyle("RepH1", parent=styles["Heading1"], fontName="Helvetica-Bold", fontSize=12.5, leading=16, textColor=colors.HexColor("#1d3557"), spaceBefore=10, spaceAfter=4, keepWithNext=True)
+    h2_style = ParagraphStyle("RepH2", parent=styles["Heading2"], fontName="Helvetica-Bold", fontSize=10.5, leading=13.5, textColor=colors.HexColor("#e63946"), spaceBefore=6, spaceAfter=2, keepWithNext=True)
+    body_style = ParagraphStyle("RepBody", parent=styles["BodyText"], fontName="Helvetica", fontSize=8.5, leading=11.5, textColor=colors.HexColor("#2b2d42"), spaceBefore=2, spaceAfter=3)
+    bullet_style = ParagraphStyle("RepBullet", parent=styles["Normal"], fontName="Helvetica", fontSize=8.5, leading=11.5, textColor=colors.HexColor("#2b2d42"), leftIndent=10, spaceBefore=1, spaceAfter=1)
+    meta_box_style = ParagraphStyle("RepMeta", parent=styles["Normal"], fontName="Helvetica", fontSize=8.5, leading=11.5, textColor=colors.HexColor("#1d3557"))
     
     story = []
     
-    # ==================== TITLE PAGE ====================
-    story.append(Spacer(1, 25))
-    story.append(Paragraph("Department of Artificial Intelligence and Data Science", ParagraphStyle("DepHead", parent=title_style, fontSize=14, leading=17, textColor=colors.HexColor("#1d3557"))))
-    story.append(Paragraph("KPR Institute of Engineering and Technology", ParagraphStyle("InstHead", parent=title_style, fontSize=16, leading=20, textColor=colors.HexColor("#e63946"))))
-    story.append(Spacer(1, 15))
-    story.append(HRFlowable(width="100%", thickness=2, color=colors.HexColor("#1d3557"), spaceAfter=20))
-    story.append(Paragraph("COURSE ASSIGNMENT II REPORT", ParagraphStyle("AssignHead", parent=subtitle_style, fontSize=12, fontName="Helvetica-Bold", textColor=colors.HexColor("#457b9d"))))
-    story.append(Paragraph("Academic Year: 2026 – 2027 (ODD SEM) | Batch: 2023–2027 | Year / Sem: V", subtitle_style))
-    story.append(Spacer(1, 20))
+    # ==================== HEADER / TITLE BLOCK ====================
+    story.append(Paragraph("Department of Artificial Intelligence and Data Science", ParagraphStyle("DepHead", fontName="Helvetica", fontSize=11, leading=14, textColor=colors.HexColor("#1d3557"), alignment=1)))
+    story.append(Paragraph("KPR Institute of Engineering and Technology, Coimbatore", ParagraphStyle("InstHead", fontName="Helvetica-Bold", fontSize=13, leading=16, textColor=colors.HexColor("#e63946"), alignment=1)))
+    story.append(Spacer(1, 4))
+    story.append(Paragraph("COURSE ASSIGNMENT II — ACADEMIC YEAR 2026 – 2027 (ODD SEM) | BATCH: 2023–2027", ParagraphStyle("AssignHead", fontName="Helvetica-Bold", fontSize=8.5, leading=11, textColor=colors.HexColor("#457b9d"), alignment=1)))
+    story.append(Spacer(1, 6))
+    story.append(HRFlowable(width="100%", thickness=1.5, color=colors.HexColor("#1d3557"), spaceAfter=8))
     
     story.append(Paragraph("Case Study: Exploratory Data Analysis, Statistical Distribution Exploration, and Deep Learning Risk Modeling of Employee Attrition", title_style))
-    story.append(Spacer(1, 25))
     
+    # Metadata Table (Without Course Coordinator or Total Marks rows)
     meta_data = [
-        [Paragraph("<b>Course Code & Title:</b>", meta_box_style), Paragraph("U21ADP05 – Exploratory Data Analysis and Visualization", meta_box_style)],
-        [Paragraph("<b>Course Coordinator:</b>", meta_box_style), Paragraph("Mr. Rushikesh Kadam", meta_box_style)],
-        [Paragraph("<b>Student Name:</b>", meta_box_style), Paragraph("Nethradevi", meta_box_style)],
-        [Paragraph("<b>Roll / Register Number:</b>", meta_box_style), Paragraph("711221104000 (AI & DS)", meta_box_style)],
-        [Paragraph("<b>Submission Date:</b>", meta_box_style), Paragraph("15/10/2026", meta_box_style)],
-        [Paragraph("<b>Total Marks Weightage:</b>", meta_box_style), Paragraph("40 Marks (CO3: 8M, CO4: 16M, CO5: 16M)", meta_box_style)],
+        [Paragraph("<b>Course Code & Title:</b>", meta_box_style), Paragraph("U21ADP05 – Exploratory Data Analysis and Visualization", meta_box_style),
+         Paragraph("<b>Student Name:</b>", meta_box_style), Paragraph("<b>Nethra</b>", meta_box_style)],
+        [Paragraph("<b>Degree & Branch:</b>", meta_box_style), Paragraph("B.Tech. Artificial Intelligence and Data Science", meta_box_style),
+         Paragraph("<b>Roll / Register No:</b>", meta_box_style), Paragraph("<b>24AD073</b>", meta_box_style)],
+        [Paragraph("<b>GitHub Repository:</b>", meta_box_style), Paragraph("<font color='#0066cc'><u>https://github.com/nethradevi924-sys/eda_project</u></font>", meta_box_style),
+         Paragraph("<b>Submission Date:</b>", meta_box_style), Paragraph("15/10/2026", meta_box_style)],
     ]
-    meta_table = Table(meta_data, colWidths=[160, 360])
+    meta_table = Table(meta_data, colWidths=[120, 180, 100, 140])
     meta_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor("#f8f9fa")),
-        ('BOX', (0, 0), (-1, -1), 1, colors.HexColor("#ced4da")),
-        ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#e9ecef")),
-        ('TOPPADDING', (0, 0), (-1, -1), 6),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
-        ('LEFTPADDING', (0, 0), (-1, -1), 10),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 10),
+        ('BOX', (0, 0), (-1, -1), 0.8, colors.HexColor("#ced4da")),
+        ('INNERGRID', (0, 0), (-1, -1), 0.4, colors.HexColor("#e9ecef")),
+        ('TOPPADDING', (0, 0), (-1, -1), 3),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+        ('LEFTPADDING', (0, 0), (-1, -1), 6),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 6),
     ]))
     story.append(meta_table)
-    story.append(Spacer(1, 40))
+    story.append(Spacer(1, 6))
     
-    # Abstract on Title Page
-    story.append(Paragraph("<b>Abstract</b>", h2_style))
-    story.append(Paragraph(
-        "Employee attrition represents an acute organizational vulnerability causing severe financial loss and operational disruption. "
+    # Abstract callout box
+    abstract_text = (
+        "<b>Abstract—</b> Employee attrition represents an acute organizational vulnerability causing severe financial loss and operational disruption. "
         "This case study presents a rigorous end-to-end framework combining Exploratory Data Analysis (EDA), parametric distribution modeling, "
         "and deep learning classification on the benchmark IBM HR Analytics dataset (1,470 records, 35 features). Structured under Ben Fry's 7 Stages "
         "of Data Visualization, we examine continuous probability density (Log-Normal vs. Gaussian), discrete Poisson mechanics, and multivariate correlation structures. "
         f"A Deep Multi-Layer Perceptron (MLP) with Batch Normalization and Dropout was trained to forecast turnover risk, yielding {metrics['accuracy']*100:.1f}% accuracy, "
         f"{metrics['precision']*100:.1f}% precision, and an ROC-AUC of {metrics['roc_auc']:.3f}. Permutation importance identifies overtime demands, total career tenure, "
-        "and compensation ceilings as primary catalysts driving attrition.",
-        body_style
-    ))
-    story.append(PageBreak())
+        "and compensation ceilings as primary catalysts driving attrition."
+    )
+    abstract_table = Table([[Paragraph(abstract_text, body_style)]], colWidths=[540])
+    abstract_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor("#eef4f8")),
+        ('BOX', (0, 0), (-1, -1), 0.6, colors.HexColor("#b8d0e0")),
+        ('TOPPADDING', (0, 0), (-1, -1), 5),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+        ('LEFTPADDING', (0, 0), (-1, -1), 8),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+    ]))
+    story.append(abstract_table)
+    story.append(Spacer(1, 6))
     
     # ==================== BODY SECTIONS ====================
     # Section 3: Introduction & Objectives
     story.append(Paragraph("3. Introduction & Objectives", h1_style))
     story.append(Paragraph(
-        "Unplanned workforce turnover inflicts severe fiscal and operational penalties on contemporary organizations. "
-        "The objective of this case study is to apply rigorous statistical visualization, exploratory data analysis, and deep neural network "
-        "modeling to a real-world enterprise dataset to diagnose attrition catalysts and deploy predictive risk scoring.",
+        "Talent retention is critical for organizational competitiveness. When experienced personnel depart, organizations incur steep replacement costs, "
+        "institutional memory erosion, and project disruption. This case study applies exploratory data analysis, statistical distribution fitting, and deep learning "
+        "to diagnose turnover risk factors and deploy early warning models.",
         body_style
     ))
-    story.append(Paragraph("<b>Core Investigation Aims:</b>", body_style))
-    story.append(Paragraph("• <b>Ben Fry's 7 Stages:</b> Implement data acquisition, parsing, filtering, mining, representation, refinement, and interaction.", bullet_style))
-    story.append(Paragraph("• <b>Statistical Modeling (CO4):</b> Model empirical data against theoretical Gaussian, Log-Normal, and Poisson distributions.", bullet_style))
+    story.append(Paragraph("• <b>Ben Fry's 7 Stages:</b> Structured execution across Acquire, Parse, Filter, Mine, Represent, Refine, and Interact.", bullet_style))
+    story.append(Paragraph("• <b>Distribution Exploration (CO4):</b> Fit continuous (Gaussian vs Log-Normal) and discrete (Poisson) probability distributions.", bullet_style))
     story.append(Paragraph("• <b>Multivariate Diagnostics:</b> Evaluate multicollinearity and hierarchical relationship clustering.", bullet_style))
-    story.append(Paragraph("• <b>Deep Learning (Step 4):</b> Design, regularize, and tune a deep Multi-Layer Perceptron with Batch Normalization.", bullet_style))
-    story.append(Paragraph("• <b>Actionable Insights:</b> Formulate data-driven retention policies for executive HR leadership.", bullet_style))
-    story.append(Spacer(1, 10))
+    story.append(Paragraph("• <b>Deep Learning (Step 4):</b> Design and tune a deep PyTorch Multi-Layer Perceptron with Batch Normalization.", bullet_style))
+    story.append(Spacer(1, 4))
     
     # Section 4: Dataset Description
     story.append(Paragraph("4. Dataset Description & Structural Properties", h1_style))
     story.append(Paragraph(
-        "The project utilizes the benchmark <b>IBM HR Analytics Employee Attrition & Performance</b> dataset comprising 1,470 individual employee records across 35 features. "
-        "The feature space spans continuous metrics (Monthly Income, Age, Tenure), discrete event counts (Promotions, Previous Employers), ordinal ratings (Work-Life Balance, Satisfaction), "
-        "and nominal attributes (Job Role, Department, Overtime). The target variable is <i>Attrition</i> ('Yes': 16.1%, 'No': 83.9%), representing a real-world imbalanced classification domain.",
+        "The project utilizes the benchmark <b>IBM HR Analytics Employee Attrition & Performance</b> dataset comprising 1,470 records across 35 features. "
+        "The features include continuous metrics (Monthly Income, Age, Tenure), discrete event counts (Promotions, Previous Employers), ordinal ratings (Work-Life Balance, Satisfaction), "
+        "and nominal attributes (Job Role, Department, Overtime). The target variable is <i>Attrition</i> ('Yes': 16.1%, 'No': 83.9%), presenting a real-world imbalanced classification domain.",
         body_style
     ))
     
     desc_data = [
-        [Paragraph("<b>Metric / Dimension</b>", meta_box_style), Paragraph("<b>Specification / Value</b>", meta_box_style)],
-        [Paragraph("Total Observations", meta_box_style), Paragraph("1,470 Employees", meta_box_style)],
-        [Paragraph("Total Original Features", meta_box_style), Paragraph("35 Features (Exceeds required ≥ 15 fields)", meta_box_style)],
-        [Paragraph("Target Class Balance", meta_box_style), Paragraph("Retained: 1,233 (83.9%) | Attrited: 237 (16.1%)", meta_box_style)],
-        [Paragraph("Missing / Null Values", meta_box_style), Paragraph("0 (100% complete across all 35 columns)", meta_box_style)],
-        [Paragraph("Zero-Variance Columns", meta_box_style), Paragraph("EmployeeCount, StandardHours, Over18 (Removed)", meta_box_style)],
+        [Paragraph("<b>Metric / Dimension</b>", meta_box_style), Paragraph("<b>Specification / Value</b>", meta_box_style),
+         Paragraph("<b>Metric / Dimension</b>", meta_box_style), Paragraph("<b>Specification / Value</b>", meta_box_style)],
+        [Paragraph("Total Observations", meta_box_style), Paragraph("1,470 Employees", meta_box_style),
+         Paragraph("Total Original Features", meta_box_style), Paragraph("35 Features (≥ 15 required)", meta_box_style)],
+        [Paragraph("Target Class Balance", meta_box_style), Paragraph("Retained: 1,233 (83.9%) | Attrited: 237 (16.1%)", meta_box_style),
+         Paragraph("Missing / Null Values", meta_box_style), Paragraph("0 (100% complete dataset)", meta_box_style)],
+        [Paragraph("Zero-Variance Columns", meta_box_style), Paragraph("EmployeeCount, StandardHours, Over18 (Removed)", meta_box_style),
+         Paragraph("Processed Features", meta_box_style), Paragraph("44 Input Features after One-Hot Encoding", meta_box_style)],
     ]
-    t_desc = Table(desc_data, colWidths=[200, 320])
+    t_desc = Table(desc_data, colWidths=[120, 150, 120, 150])
     t_desc.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#e9ecef")),
         ('BOX', (0, 0), (-1, -1), 0.5, colors.HexColor("#ced4da")),
-        ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#e9ecef")),
-        ('TOPPADDING', (0, 0), (-1, -1), 4),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ('INNERGRID', (0, 0), (-1, -1), 0.4, colors.HexColor("#e9ecef")),
+        ('TOPPADDING', (0, 0), (-1, -1), 2.5),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 2.5),
+        ('LEFTPADDING', (0, 0), (-1, -1), 5),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 5),
     ]))
     story.append(t_desc)
-    story.append(Spacer(1, 10))
+    story.append(Spacer(1, 4))
     
     # Section 5: Preprocessing
     story.append(Paragraph("5. EDA & Preprocessing Pipeline", h1_style))
     story.append(Paragraph(
-        "<b>1. Data Sanitization:</b> Removed uninformative constants (<i>EmployeeCount, StandardHours, Over18</i>) and arbitrary identifier <i>EmployeeNumber</i>.<br/>"
-        "<b>2. Outlier Winsorization:</b> Applied IQR boundary capping to extreme upper-tail values in <i>MonthlyIncome</i> and <i>TotalWorkingYears</i> to stabilize neural gradient propagation.<br/>"
-        "<b>3. One-Hot Encoding:</b> Encoded nominal features (<i>JobRole, Department, EducationField, MaritalStatus, OverTime</i>), expanding input dimensions to 45 nodes.<br/>"
-        "<b>4. Feature Standardization:</b> Standardized continuous variables using <code>StandardScaler</code> fitted strictly on the training partition.<br/>"
-        "<b>5. Stratified Partitioning:</b> Partitioned data into 70% Train (1,029), 15% Validation (220), and 15% Test (221) while strictly preserving the 16.1% target attrition proportion.",
+        "<b>1. Sanitization:</b> Removed constant features (<i>EmployeeCount, StandardHours, Over18</i>) and uninformative identifier <i>EmployeeNumber</i>.<br/>"
+        "<b>2. Outlier Treatment:</b> Applied IQR boundary capping (Winsorization) to extreme upper tails of <i>MonthlyIncome</i> and <i>TotalWorkingYears</i> to stabilize gradients.<br/>"
+        "<b>3. Categorical Encoding:</b> One-Hot Encoded nominal attributes (<i>JobRole, Department, EducationField, MaritalStatus, OverTime, BusinessTravel</i>) to 44 features.<br/>"
+        "<b>4. Normalization:</b> Scaled features using <code>StandardScaler</code> fitted strictly on training data to prevent leakage.<br/>"
+        "<b>5. Stratified Partitioning:</b> Partitioned data into 70% Train (1,029), 15% Validation (220), and 15% Test (221) while preserving class proportions.",
         body_style
     ))
-    story.append(PageBreak())
+    story.append(Spacer(1, 6))
     
     # Section 6: Data Visualization
-    story.append(Paragraph("6. Exploratory Data Visualization & Statistical Findings", h1_style))
+    story.append(Paragraph("6. Exploratory Data Visualization & Statistical Findings (Ben Fry's 7 Stages & CO3/CO4)", h1_style))
     story.append(Paragraph(
-        "Visualizations were constructed according to <b>Ben Fry's 7 Stages of Data Visualization</b> (Acquire, Parse, Filter, Mine, Represent, Refine, Interact). "
-        "Each visualization fulfills the rubrics for CO3 (Data Visualization) and CO4 (Statistical & Distribution Exploration).",
+        "Each visual below incorporates Ben Fry's 7 Stages (Acquire, Parse, Filter, Mine, Represent, Refine, Interact) with complete interpretations:",
         body_style
     ))
     
+    # Loop over EDA visuals with KeepTogether to prevent large gaps
     for idx, vis in enumerate(eda_catalog, start=1):
-        story.append(Paragraph(f"<b>Figure {idx}: {vis['title']}</b>", h2_style))
+        fig_elements = []
+        fig_elements.append(Paragraph(f"<b>Figure {idx}: {vis['title']}</b>", h2_style))
         if os.path.exists(vis["file"]):
-            story.append(Image(vis["file"], width=6.8 * inch, height=2.8 * inch))
-        story.append(Paragraph(f"<b>• What it shows:</b> {vis['shows']}", body_style))
-        story.append(Paragraph(f"<b>• Why it was created:</b> {vis['why']}", body_style))
-        story.append(Paragraph(f"<b>• Insights obtained:</b> {vis['insights']}", body_style))
-        story.append(Spacer(1, 8))
-        if idx in [2, 4, 6]:
-            story.append(PageBreak())
-            
-    # Section 7: Deep Learning Model
-    story.append(PageBreak())
+            fig_elements.append(Image(vis["file"], width=5.8 * inch, height=2.1 * inch))
+        fig_elements.append(Paragraph(f"<b>• What it shows:</b> {vis['shows']}", body_style))
+        fig_elements.append(Paragraph(f"<b>• Why created:</b> {vis['why']}", body_style))
+        fig_elements.append(Paragraph(f"<b>• Insights obtained:</b> {vis['insights']}", body_style))
+        fig_elements.append(Spacer(1, 4))
+        story.append(KeepTogether(fig_elements))
+        
+    # Section 7: Deep Learning Model Architecture
     story.append(Paragraph("7. Deep Learning Model Architecture & Hyperparameter Tuning", h1_style))
     story.append(Paragraph(
-        "A Deep Multi-Layer Perceptron (MLP) was implemented in PyTorch for tabular risk classification. "
-        "The architecture integrates Batch Normalization after linear transformations to counter internal covariate shift, "
-        "alongside Dropout regularization and LeakyReLU activations to prevent neuron saturation and overfitting on tabular tabular data.",
+        "A Deep Multi-Layer Perceptron (MLP) was constructed in PyTorch. The architecture uses Batch Normalization after linear transformations "
+        "to prevent internal covariate shift, paired with Dropout regularization and LeakyReLU activations to prevent neuron saturation on tabular inputs.",
         body_style
     ))
     
     arch_data = [
         [Paragraph("<b>Layer</b>", meta_box_style), Paragraph("<b>Components & Dimensions</b>", meta_box_style), Paragraph("<b>Regularization & Activation</b>", meta_box_style)],
-        [Paragraph("Input Layer", meta_box_style), Paragraph("45 Standardized Features", meta_box_style), Paragraph("StandardScaler Normalization", meta_box_style)],
-        [Paragraph("Hidden Layer 1", meta_box_style), Paragraph("Linear(45 -> 128)", meta_box_style), Paragraph("BatchNorm1d + LeakyReLU(0.1) + Dropout(0.3)", meta_box_style)],
+        [Paragraph("Input Layer", meta_box_style), Paragraph("44 Standardized Features", meta_box_style), Paragraph("StandardScaler Normalization", meta_box_style)],
+        [Paragraph("Hidden Layer 1", meta_box_style), Paragraph("Linear(44 -> 128)", meta_box_style), Paragraph("BatchNorm1d + LeakyReLU(0.1) + Dropout(0.3)", meta_box_style)],
         [Paragraph("Hidden Layer 2", meta_box_style), Paragraph("Linear(128 -> 64)", meta_box_style), Paragraph("BatchNorm1d + LeakyReLU(0.1) + Dropout(0.2)", meta_box_style)],
         [Paragraph("Hidden Layer 3", meta_box_style), Paragraph("Linear(64 -> 32)", meta_box_style), Paragraph("LeakyReLU(0.1) + Dropout(0.1)", meta_box_style)],
-        [Paragraph("Output Layer", meta_box_style), Paragraph("Linear(32 -> 1)", meta_box_style), Paragraph("Sigmoid ($P(\\text{Attrition}=1)$)", meta_box_style)],
+        [Paragraph("Output Layer", meta_box_style), Paragraph("Linear(32 -> 1)", meta_box_style), Paragraph("Sigmoid Activation ($P(\\text{Attrition}=1)$)", meta_box_style)],
     ]
-    t_arch = Table(arch_data, colWidths=[100, 200, 220])
+    t_arch = Table(arch_data, colWidths=[100, 200, 240])
     t_arch.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#e9ecef")),
         ('BOX', (0, 0), (-1, -1), 0.5, colors.HexColor("#ced4da")),
-        ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#e9ecef")),
-        ('TOPPADDING', (0, 0), (-1, -1), 4),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ('INNERGRID', (0, 0), (-1, -1), 0.4, colors.HexColor("#e9ecef")),
+        ('TOPPADDING', (0, 0), (-1, -1), 2.5),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 2.5),
+        ('LEFTPADDING', (0, 0), (-1, -1), 5),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 5),
     ]))
     story.append(t_arch)
-    story.append(Spacer(1, 10))
+    story.append(Spacer(1, 4))
     
     story.append(Paragraph("<b>Hyperparameter Tuning Benchmark Table:</b>", body_style))
     tune_table_data = [[
         Paragraph("<b>Config</b>", meta_box_style),
-        Paragraph("<b>LR</b>", meta_box_style),
-        Paragraph("<b>Batch</b>", meta_box_style),
-        Paragraph("<b>Dropout</b>", meta_box_style),
-        Paragraph("<b>Val Loss</b>", meta_box_style),
-        Paragraph("<b>Val Acc (%)</b>", meta_box_style)
+        Paragraph("<b>Learning Rate</b>", meta_box_style),
+        Paragraph("<b>Batch Size</b>", meta_box_style),
+        Paragraph("<b>Dropout Rates</b>", meta_box_style),
+        Paragraph("<b>Best Val Loss</b>", meta_box_style),
+        Paragraph("<b>Best Val Acc (%)</b>", meta_box_style)
     ]]
     for _, row in tuning_df.iterrows():
         tune_table_data.append([
@@ -422,66 +430,71 @@ def generate_pdf_report(eda_catalog: list[dict], eval_catalog: list[dict], metri
             Paragraph(str(row["Best Val Loss"]), meta_box_style),
             Paragraph(f"{row['Best Val Accuracy (%)']}%", meta_box_style),
         ])
-    t_tune = Table(tune_table_data, colWidths=[140, 50, 50, 140, 70, 70])
+    t_tune = Table(tune_table_data, colWidths=[130, 70, 60, 140, 70, 70])
     t_tune.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#e9ecef")),
         ('BOX', (0, 0), (-1, -1), 0.5, colors.HexColor("#ced4da")),
-        ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#e9ecef")),
-        ('TOPPADDING', (0, 0), (-1, -1), 3),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+        ('INNERGRID', (0, 0), (-1, -1), 0.4, colors.HexColor("#e9ecef")),
+        ('TOPPADDING', (0, 0), (-1, -1), 2.5),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 2.5),
+        ('LEFTPADDING', (0, 0), (-1, -1), 5),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 5),
     ]))
     story.append(t_tune)
-    story.append(Spacer(1, 10))
+    story.append(Spacer(1, 6))
     
     # Section 8: Model Evaluation
     story.append(Paragraph("8. Result Visualization & Performance Interpretation", h1_style))
     for idx, vis in enumerate(eval_catalog, start=8):
-        story.append(Paragraph(f"<b>Figure {idx}: {vis['title']}</b>", h2_style))
+        eval_elements = []
+        eval_elements.append(Paragraph(f"<b>Figure {idx}: {vis['title']}</b>", h2_style))
         if os.path.exists(vis["file"]):
-            img_h = 2.6 * inch if idx != 9 else 2.5 * inch
-            story.append(Image(vis["file"], width=6.5 * inch, height=img_h))
-        story.append(Paragraph(f"<b>• What it shows:</b> {vis['shows']}", body_style))
-        story.append(Paragraph(f"<b>• Why it was created:</b> {vis['why']}", body_style))
-        story.append(Paragraph(f"<b>• Insights obtained:</b> {vis['insights']}", body_style))
-        story.append(Spacer(1, 6))
-        if idx in [9, 11]:
-            story.append(PageBreak())
-            
+            img_h = 2.0 * inch if idx != 9 else 1.9 * inch
+            eval_elements.append(Image(vis["file"], width=5.6 * inch, height=img_h))
+        eval_elements.append(Paragraph(f"<b>• What it shows:</b> {vis['shows']}", body_style))
+        eval_elements.append(Paragraph(f"<b>• Why created:</b> {vis['why']}", body_style))
+        eval_elements.append(Paragraph(f"<b>• Insights obtained:</b> {vis['insights']}", body_style))
+        eval_elements.append(Spacer(1, 4))
+        story.append(KeepTogether(eval_elements))
+        
     # Section 9: Conclusion & Future Scope
-    story.append(Paragraph("9. Conclusion & Future Scope", h1_style))
-    story.append(Paragraph(
-        "<b>Summary of Findings:</b> This investigation established that workforce turnover is not random but governed by specific organizational stress vectors. "
-        "Mandatory overtime exerts the largest single multiplier effect (30.5% attrition vs 10.4% without overtime). Young tenure employees and entry-level sales representatives "
-        "face the highest attrition hazard. The PyTorch Multi-Layer Perceptron delivered robust classification performance ({:.1f}% accuracy, {:.3f} ROC-AUC) "
-        "while providing interpretability through permutation feature importance.<br/><br/>"
-        "<b>Challenges Encountered:</b> Primary hurdles included significant class imbalance (16.1% positive class) and high inter-feature collinearity among career tenure variables.<br/><br/>"
+    conc_elements = []
+    conc_elements.append(Paragraph("9. Conclusion & Future Scope", h1_style))
+    conc_elements.append(Paragraph(
+        "<b>Summary of Findings:</b> This investigation establishes that workforce turnover is driven by identifiable operational catalysts. "
+        "Mandatory overtime exerts the largest single multiplier effect (30.5% attrition vs 10.4% without overtime). Young tenure employees and entry-level sales roles "
+        f"experience the highest attrition hazard. The PyTorch Multi-Layer Perceptron delivered {metrics['accuracy']*100:.1f}% accuracy and {metrics['roc_auc']:.3f} ROC-AUC, "
+        "while permutation feature importance confirms overtime mandates, tenure, and monthly income as dominant predictors.<br/><br/>"
+        "<b>Challenges Encountered:</b> Addressed severe class imbalance (16.1% positive class) via class-weighted binary cross-entropy loss, and handled multicollinear career tenure features.<br/><br/>"
         "<b>Future Enhancements:</b><br/>"
-        "• Integrate Explainable AI (XAI) frameworks such as SHAP and LIME for individualized employee retention scorecards.<br/>"
-        "• Benchmark tabular-specific deep architectures like TabNet and TabTransformer.<br/>"
-        "• Formulate continuous-time survival hazard curves using DeepSurv to project exact departure timeframes.".format(
-            metrics['accuracy']*100, metrics['roc_auc']
-        ),
+        "• Integrate Explainable AI (XAI) frameworks (SHAP and LIME) for individualized employee risk scorecards.<br/>"
+        "• Benchmark tabular transformer architectures (TabNet, FT-Transformer) on broader datasets.<br/>"
+        "• Formulate continuous-time survival hazard modeling using DeepSurv to project expected tenure intervals.",
         body_style
     ))
-    story.append(Spacer(1, 8))
+    conc_elements.append(Spacer(1, 4))
+    story.append(KeepTogether(conc_elements))
     
     # Section 10: References
-    story.append(Paragraph("10. Literature Review & References (APA / IEEE Style)", h1_style))
+    ref_elements = []
+    ref_elements.append(Paragraph("10. Literature Review & References (APA / IEEE Style)", h1_style))
     refs = [
         "1. Fry, B. (2008). <i>Visualizing Data: Exploring and Explaining Data with the Processing Environment</i>. O'Reilly Media. ISBN: 978-0596514556.",
-        "2. Tukey, J. W. (1977). <i>Exploratory Data Analysis</i>. Addison-Wesley Publishing Company. (Foundational methodology for boxplots, IQR outlier detection, and distribution modeling).",
-        "3. Goodfellow, I., Bengio, Y., & Courville, A. (2016). <i>Deep Learning</i>. MIT Press. http://www.deeplearningbook.org (Principles of MLPs, Batch Normalization, and Dropout).",
+        "2. Tukey, J. W. (1977). <i>Exploratory Data Analysis</i>. Addison-Wesley Publishing Company.",
+        "3. Goodfellow, I., Bengio, Y., & Courville, A. (2016). <i>Deep Learning</i>. MIT Press. http://www.deeplearningbook.org",
         "4. Alao, D., & Adeyemo, A. B. (2013). 'Analyzing employee attrition using decision tree algorithms.' <i>Computing, Information Systems, Development Informatics & Allied Research Journal</i>, 4(1), 17–28.",
         "5. Punnoose, R., & Ajit, P. (2016). 'Prediction of employee turnover in organizations using machine learning algorithms.' <i>International Journal of Advanced Research in Artificial Intelligence (IJARAI)</i>, 5(9), 22–26. https://doi.org/10.14569/IJARAI.2016.050904."
     ]
     for r in refs:
-        story.append(Paragraph(r, bullet_style))
-    story.append(Spacer(1, 8))
+        ref_elements.append(Paragraph(r, bullet_style))
+    ref_elements.append(Spacer(1, 4))
+    story.append(KeepTogether(ref_elements))
     
     # Section 11: Appendix
-    story.append(Paragraph("11. Appendix: Modular Codebase & Reproducibility", h1_style))
-    story.append(Paragraph(
-        "The complete Python project is structured into self-contained, production-ready modules:<br/>"
+    app_elements = []
+    app_elements.append(Paragraph("11. Appendix: Modular Codebase & Repository Structure", h1_style))
+    app_elements.append(Paragraph(
+        "The project is structured into self-contained, reproducible Python modules:<br/>"
         "• <code>src/data_loader.py</code>: Data ingestion and integrity auditing.<br/>"
         "• <code>src/preprocessing.py</code>: IQR Winsorization, encoding, and stratified splitting.<br/>"
         "• <code>src/visualizations.py</code>: Ben Fry 7 stages & CO3/CO4 statistical visualization suite.<br/>"
@@ -489,13 +502,14 @@ def generate_pdf_report(eda_catalog: list[dict], eval_catalog: list[dict], metri
         "• <code>src/train.py</code>: Weighted BCE training loop, early stopping, and hyperparameter tuning.<br/>"
         "• <code>src/evaluate.py</code>: Test set metrics, confusion matrix, ROC-AUC, and permutation importance.<br/>"
         "• <code>src/generate_report_pdf.py</code>: Academic report compiler.<br/>"
-        "• <code>notebooks/eda_and_deep_learning.ipynb</code>: Fully executed end-to-end Jupyter Notebook.<br/><br/>"
-        "<b>Public GitHub Repository:</b> <code>https://github.com/nethradevi924-sys/eda_project</code>",
+        "• <code>notebooks/eda_and_deep_learning.ipynb</code>: Executed interactive Jupyter Notebook.<br/><br/>"
+        "<b>Public GitHub Repository:</b> <font color='#0066cc'><u>https://github.com/nethradevi924-sys/eda_project</u></font>",
         body_style
     ))
+    story.append(KeepTogether(app_elements))
     
-    doc.build(story)
-    print(f"[PDF Generator] Successfully generated PDF report at '{output_path}'.")
+    doc.build(story, canvasmaker=NumberedCanvas)
+    print(f"[PDF Generator] Successfully generated professional compact PDF report at '{output_path}'.")
 
 
 def generate_full_reports(eda_catalog: list[dict], eval_catalog: list[dict], metrics: dict, tuning_df: pd.DataFrame):

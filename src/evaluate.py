@@ -17,7 +17,7 @@ from sklearn.metrics import (
     classification_report
 )
 
-FIGURES_DIR = "outputs/figures"
+FIGURES_DIR = os.path.abspath("outputs/figures")
 os.makedirs(FIGURES_DIR, exist_ok=True)
 
 

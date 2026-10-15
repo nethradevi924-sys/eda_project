@@ -32,8 +32,7 @@ def create_and_run_notebook():
 **Department of Artificial Intelligence and Data Science**  
 **KPR Institute of Engineering and Technology**  
 - **Academic Year:** 2026 – 2027 (ODD SEM) | **Batch:** 2023–2027 | **Year / Sem:** V
-- **Course Coordinator:** Mr. Rushikesh Kadam | **Assignment:** II (40 Marks: CO3, CO4, CO5)
-- **Student Name:** Nethradevi | **Roll No:** 711221104000 (AI & DS)
+- **Student Name:** Nethra | **Roll No:** 24AD073
 - **Submission Date:** 15/10/2026
 
 ---

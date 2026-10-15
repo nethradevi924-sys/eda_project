@@ -8,9 +8,8 @@
 > **Academic Assignment II: Case Study Report and Codebase**  
 > **Institution:** Department of Artificial Intelligence and Data Science, KPR Institute of Engineering and Technology  
 > **Course Code & Title:** U21ADP05 – Exploratory Data Analysis and Visualization  
-> **Course Coordinator:** Mr. Rushikesh Kadam  
 > **Batch:** 2023–2027 (Year III / Sem V) | **Marks:** 40 (CO3: 8M, CO4: 16M, CO5: 16M)  
-> **Author / Student:** Nethradevi ([@nethradevi924-sys](https://github.com/nethradevi924-sys))  
+> **Author / Student:** Nethra (Roll No: 24AD073 | [@nethradevi924-sys](https://github.com/nethradevi924-sys))  
 
 ---
 
