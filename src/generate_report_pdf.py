@@ -29,13 +29,13 @@ def build_markdown_report(eda_catalog: list[dict], eval_catalog: list[dict], met
 **Institution:** Department of Artificial Intelligence and Data Science, KPR Institute of Engineering and Technology  
 **Course Coordinator:** Mr. Rushikesh Kadam  
 **Date of Submission:** 15/10/2026  
-**Student Name:** Yogaraj S | **Roll No:** [Student Roll Number]  
+**Student Name:** Nethradevi | **Roll No:** [Student Roll Number]  
 
 ---
 
 ## 1. Title Page Information
 - **Project Title:** Case Study: Exploratory Data Analysis, Statistical Distribution Exploration, and Deep Learning Risk Modeling of Employee Attrition
-- **Student Name:** Yogaraj S
+- **Student Name:** Nethradevi
 - **Roll Number / Register ID:** 711221104000 (AI & DS)
 - **Degree & Branch:** B.Tech. Artificial Intelligence and Data Science
 - **Semester / Year:** Semester V / Year III (Batch 2023–2027)
@@ -221,7 +221,7 @@ The full reproducible Python codebase is organized into modular pipelines:
 - `src/generate_report_pdf.py`: Automated academic report compilation.
 - `notebooks/eda_and_deep_learning.ipynb`: Fully executed, interactive end-to-end Jupyter Notebook.
 
-GitHub Repository: [Your GitHub Repository Link]
+GitHub Repository: https://github.com/nethradevi924-sys/eda_project
 """
     return md_content
 
@@ -267,7 +267,7 @@ def generate_pdf_report(eda_catalog: list[dict], eval_catalog: list[dict], metri
     meta_data = [
         [Paragraph("<b>Course Code & Title:</b>", meta_box_style), Paragraph("U21ADP05 – Exploratory Data Analysis and Visualization", meta_box_style)],
         [Paragraph("<b>Course Coordinator:</b>", meta_box_style), Paragraph("Mr. Rushikesh Kadam", meta_box_style)],
-        [Paragraph("<b>Student Name:</b>", meta_box_style), Paragraph("Yogaraj S", meta_box_style)],
+        [Paragraph("<b>Student Name:</b>", meta_box_style), Paragraph("Nethradevi", meta_box_style)],
         [Paragraph("<b>Roll / Register Number:</b>", meta_box_style), Paragraph("711221104000 (AI & DS)", meta_box_style)],
         [Paragraph("<b>Submission Date:</b>", meta_box_style), Paragraph("15/10/2026", meta_box_style)],
         [Paragraph("<b>Total Marks Weightage:</b>", meta_box_style), Paragraph("40 Marks (CO3: 8M, CO4: 16M, CO5: 16M)", meta_box_style)],
@@ -489,7 +489,8 @@ def generate_pdf_report(eda_catalog: list[dict], eval_catalog: list[dict], metri
         "• <code>src/train.py</code>: Weighted BCE training loop, early stopping, and hyperparameter tuning.<br/>"
         "• <code>src/evaluate.py</code>: Test set metrics, confusion matrix, ROC-AUC, and permutation importance.<br/>"
         "• <code>src/generate_report_pdf.py</code>: Academic report compiler.<br/>"
-        "• <code>notebooks/eda_and_deep_learning.ipynb</code>: Fully executed end-to-end Jupyter Notebook.",
+        "• <code>notebooks/eda_and_deep_learning.ipynb</code>: Fully executed end-to-end Jupyter Notebook.<br/><br/>"
+        "<b>Public GitHub Repository:</b> <code>https://github.com/nethradevi924-sys/eda_project</code>",
         body_style
     ))
     

@@ -33,7 +33,7 @@ def create_and_run_notebook():
 **KPR Institute of Engineering and Technology**  
 - **Academic Year:** 2026 – 2027 (ODD SEM) | **Batch:** 2023–2027 | **Year / Sem:** V
 - **Course Coordinator:** Mr. Rushikesh Kadam | **Assignment:** II (40 Marks: CO3, CO4, CO5)
-- **Student Name:** Yogaraj S | **Roll No:** 711221104000 (AI & DS)
+- **Student Name:** Nethradevi | **Roll No:** 711221104000 (AI & DS)
 - **Submission Date:** 15/10/2026
 
 ---

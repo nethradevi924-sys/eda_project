@@ -4,13 +4,13 @@
 **Institution:** Department of Artificial Intelligence and Data Science, KPR Institute of Engineering and Technology  
 **Course Coordinator:** Mr. Rushikesh Kadam  
 **Date of Submission:** 15/10/2026  
-**Student Name:** Yogaraj S | **Roll No:** [Student Roll Number]  
+**Student Name:** Nethradevi | **Roll No:** [Student Roll Number]  
 
 ---
 
 ## 1. Title Page Information
 - **Project Title:** Case Study: Exploratory Data Analysis, Statistical Distribution Exploration, and Deep Learning Risk Modeling of Employee Attrition
-- **Student Name:** Yogaraj S
+- **Student Name:** Nethradevi
 - **Roll Number / Register ID:** 711221104000 (AI & DS)
 - **Degree & Branch:** B.Tech. Artificial Intelligence and Data Science
 - **Semester / Year:** Semester V / Year III (Batch 2023–2027)
@@ -22,7 +22,7 @@
 ---
 
 ## 2. Abstract (142 words)
-Employee attrition presents a major operational and financial vulnerability for contemporary enterprises, often incurring significant replacement and retraining expenses. This case study applies an end-to-end framework encompassing exploratory data analysis (EDA), rigorous statistical distribution modeling, and deep learning classification to the benchmark IBM HR Analytics dataset (1,470 records, 35 features). Guided by Ben Fry's 7 Stages of Data Visualization, we explore continuous probability distributions (Log-Normal vs. Gaussian), discrete count mechanics (Poisson modeling), and multivariate interrelationships. A Deep Multi-Layer Perceptron (MLP) with Batch Normalization and Dropout regularization was engineered, optimized with class-weighted binary cross-entropy, and trained to predict individual employee turnover risk. The neural network achieved an overall accuracy of 86.9%, a precision of 62.1%, and an ROC-AUC of 0.837. Permutation importance isolates overtime mandates, career experience, and monthly income as paramount turnover catalysts.
+Employee attrition presents a major operational and financial vulnerability for contemporary enterprises, often incurring significant replacement and retraining expenses. This case study applies an end-to-end framework encompassing exploratory data analysis (EDA), rigorous statistical distribution modeling, and deep learning classification to the benchmark IBM HR Analytics dataset (1,470 records, 35 features). Guided by Ben Fry's 7 Stages of Data Visualization, we explore continuous probability distributions (Log-Normal vs. Gaussian), discrete count mechanics (Poisson modeling), and multivariate interrelationships. A Deep Multi-Layer Perceptron (MLP) with Batch Normalization and Dropout regularization was engineered, optimized with class-weighted binary cross-entropy, and trained to predict individual employee turnover risk. The neural network achieved an overall accuracy of 86.4%, a precision of 58.8%, and an ROC-AUC of 0.808. Permutation importance isolates overtime mandates, career experience, and monthly income as paramount turnover catalysts.
 
 ---
 
@@ -155,10 +155,10 @@ To predict employee turnover risk from the 45 standardized input features, a Mul
 ### Hyperparameter Tuning Benchmark:
 | Configuration | Learning Rate | Batch Size | Dropout Rates | Best Val Loss | Best Val Acc (%) |
 |---|---|---|---|---|---|
-| Config A (Baseline) | 0.001 | 32 | [0.3, 0.2, 0.1] | 0.3751 | 87.27% |
-| Config B (High LR) | 0.005 | 32 | [0.3, 0.2, 0.1] | 0.4075 | 88.18% |
-| Config C (High Regularization) | 0.001 | 64 | [0.4, 0.3, 0.2] | 0.3976 | 85.91% |
-| Config D (Small Batch, Low LR) | 0.0005 | 16 | [0.2, 0.1, 0.05] | 0.3845 | 85.91% |
+| Config A (Baseline) | 0.001 | 32 | [0.3, 0.2, 0.1] | 0.3678 | 85.0% |
+| Config B (High LR) | 0.005 | 32 | [0.3, 0.2, 0.1] | 0.3967 | 85.45% |
+| Config C (High Regularization) | 0.001 | 64 | [0.4, 0.3, 0.2] | 0.3838 | 88.18% |
+| Config D (Small Batch, Low LR) | 0.0005 | 16 | [0.2, 0.1, 0.05] | 0.3756 | 87.73% |
 
 ---
 
@@ -174,31 +174,31 @@ To predict employee turnover risk from the 45 standardized input features, a Mul
 ![Model Performance: Confusion Matrix Evaluation](../outputs/figures\09_confusion_matrix.png)
 - **What it shows:** Heatmap matrix displaying counts and percentage proportions of True Negatives, False Positives, False Negatives, and True Positives on the 15% unseen test partition.
 - **Why it was created:** To diagnose class-specific predictive fidelity, particularly assessing the neural network's sensitivity in identifying true attrition events under class imbalance.
-- **Insights obtained:** The model correctly classifies 174 retained employees (specificity: 94.1%) and flags 18 at-risk personnel with an overall accuracy of 86.9%. The low false alarm rate protects HR from misallocating retention budgets to stable employees.
+- **Insights obtained:** The model correctly classifies 171 retained employees (specificity: 92.4%) and flags 20 at-risk personnel with an overall accuracy of 86.4%. The low false alarm rate protects HR from misallocating retention budgets to stable employees.
 
 ### Visualization 10: Discriminative Ability: Receiver Operating Characteristic (ROC-AUC)
 ![Discriminative Ability: Receiver Operating Characteristic (ROC-AUC)](../outputs/figures\10_roc_auc_curve.png)
 - **What it shows:** ROC Curve illustrating the trade-off between True Positive Rate (Sensitivity) and False Positive Rate across all classification thresholds, including the AUC benchmark.
 - **Why it was created:** To quantify the model's global ranking capability independent of arbitrary decision thresholds, essential for imbalanced classification.
-- **Insights obtained:** The Attrition MLP attains a strong ROC-AUC score of 0.837, substantially superior to the 0.50 random classifier baseline. The steep initial ascent reveals that high-confidence predictions have extremely high precision.
+- **Insights obtained:** The Attrition MLP attains a strong ROC-AUC score of 0.808, substantially superior to the 0.50 random classifier baseline. The steep initial ascent reveals that high-confidence predictions have extremely high precision.
 
 ### Visualization 11: Model Interpretability: Permutation Feature Importance
 ![Model Interpretability: Permutation Feature Importance](../outputs/figures\11_feature_importance.png)
 - **What it shows:** Horizontal bar chart showcasing the top 15 features ranked by their impact on model ROC-AUC score when permuted on the validation set.
 - **Why it was created:** To provide transparency into neural network decision logic, identifying which organizational attributes most heavily drive the model's turnover risk estimates.
-- **Insights obtained:** The top 3 critical drivers governing turnover predictions are OverTime_Yes, JobSatisfaction, NumCompaniesWorked. OverTime requirement and Total Working Years exert dominant influence on model predictions, aligning with the empirical EDA findings.
+- **Insights obtained:** The top 3 critical drivers governing turnover predictions are OverTime_Yes, BusinessTravel_Travel_Frequently, EducationField_Life Sciences. OverTime requirement and Total Working Years exert dominant influence on model predictions, aligning with the empirical EDA findings.
 
 ### Quantitative Test Set Performance:
-- **Overall Accuracy:** 86.88%
-- **Precision:** 62.07%
-- **Recall (Sensitivity):** 50.00%
-- **F1-Score:** 55.38%
-- **ROC-AUC Score:** 0.8369
+- **Overall Accuracy:** 86.43%
+- **Precision:** 58.82%
+- **Recall (Sensitivity):** 55.56%
+- **F1-Score:** 57.14%
+- **ROC-AUC Score:** 0.8084
 - **Confusion Matrix Breakdown:**
-  - True Negatives (Retained correctly identified): **174**
-  - False Positives (Retained falsely flagged): **11**
-  - False Negatives (Attrited missed): **18**
-  - True Positives (Attrited correctly identified): **18**
+  - True Negatives (Retained correctly identified): **171**
+  - False Positives (Retained falsely flagged): **14**
+  - False Negatives (Attrited missed): **16**
+  - True Positives (Attrited correctly identified): **20**
 
 ---
 
@@ -208,7 +208,7 @@ To predict employee turnover risk from the 45 standardized input features, a Mul
 1. **Overtime as the Dominant Risk Vector:** Requiring overtime increases turnover rate from 10.4% to 30.5% (a 3x jump). The deep learning model ranks overtime as the single most critical predictor.
 2. **Compensation & Experience Disconnect:** Employees departing the organization exhibit stagnant earnings relative to cumulative experience, clustering below the $5,000/month threshold even with 8–12 years of overall career tenure.
 3. **Tenure with Current Manager:** Employees in their first 1–2 years under a manager face significantly higher turnover hazard, pointing to managerial onboarding friction.
-4. **Model Performance:** The deep MLP architecture with Batch Normalization achieved strong convergence without memorizing the majority class, registering an ROC-AUC of 0.837.
+4. **Model Performance:** The deep MLP architecture with Batch Normalization achieved strong convergence without memorizing the majority class, registering an ROC-AUC of 0.808.
 
 ### Challenges Faced:
 - **Class Imbalance:** Only 16.1% of records represent turnover, necessitating weighted cross-entropy loss and ROC-AUC evaluation rather than naive accuracy.
@@ -242,4 +242,4 @@ The full reproducible Python codebase is organized into modular pipelines:
 - `src/generate_report_pdf.py`: Automated academic report compilation.
 - `notebooks/eda_and_deep_learning.ipynb`: Fully executed, interactive end-to-end Jupyter Notebook.
 
-GitHub Repository: [Your GitHub Repository Link]
+GitHub Repository: https://github.com/nethradevi924-sys/eda_project

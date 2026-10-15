@@ -10,7 +10,7 @@
 > **Course Code & Title:** U21ADP05 – Exploratory Data Analysis and Visualization  
 > **Course Coordinator:** Mr. Rushikesh Kadam  
 > **Batch:** 2023–2027 (Year III / Sem V) | **Marks:** 40 (CO3: 8M, CO4: 16M, CO5: 16M)  
-> **Author / Student:** Yogaraj S  
+> **Author / Student:** Nethradevi ([@nethradevi924-sys](https://github.com/nethradevi924-sys))  
 
 ---
 
@@ -140,8 +140,8 @@ EDA_project/
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/YOUR_USERNAME/EDA_project.git
-cd EDA_project
+git clone https://github.com/nethradevi924-sys/eda_project.git
+cd eda_project
 ```
 
 ### 2. Set Up Virtual Environment & Install Dependencies
